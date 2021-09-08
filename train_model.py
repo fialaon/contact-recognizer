@@ -3,7 +3,7 @@ import copy
 import random
 import h5py
 import time
-import cPickle as pk
+import pickle as pk
 import numpy as np
 from datetime import datetime
 from os import makedirs, remove
@@ -80,7 +80,8 @@ def train_model(dataloaders,
                     optimizer_ft.step()
 
                 # statistics
-                running_loss += loss.data[0] * inputs.size(0)
+                running_loss += loss.data.item() * inputs.size(0)
+                #exit(101)
                 running_corrects += torch.sum(preds == labels.data)
 
             epoch_loss = running_loss / dataset_sizes[phase]

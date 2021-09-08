@@ -1,5 +1,5 @@
 import argparse
-import cPickle as pk
+import pickle as pk
 import numpy as np
 import numpy.linalg as LA
 from os import makedirs
@@ -17,6 +17,7 @@ if __name__ == '__main__':
         description="Visualizing joint contact states on images")
     parser.add_argument('image_folder', type=str)
     parser.add_argument('save_folder', type=str)
+    parser.add_argument('path_j2d', type=str)
     parser.add_argument('--path-contact-states', type=str, default='')
     parser.add_argument(
         '--joint-names', type=str, default='hands,soles',
@@ -39,7 +40,8 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------
     # Load basic info
     path_datainfo = join(image_folder, "data_info.pkl")
-    path_j2d = join(image_folder, "Openpose-video.pkl")
+    #path_j2d = join(image_folder, "Openpose-video.pkl")
+    path_j2d = args.path_j2d
     if not path_contact_states:
         path_contact_states = join(
             dirname(image_folder), "contact_states_annotation.pkl")
@@ -57,7 +59,7 @@ if __name__ == '__main__':
     print("(vis_preds.py) Loading image folder info ...\n"
           " - Path: {0:s}".format(path_datainfo))
 
-    with open(path_datainfo, 'r') as f:
+    with open(path_datainfo, 'rb') as f:
         data_info = pk.load(f)
         image_names = data_info["image_names"]
         image_to_itemframe = data_info["image_to_itemframe"]
@@ -73,7 +75,7 @@ if __name__ == '__main__':
     print("(vis_preds.py) Loading joint 2D positions ...\n"
           " - Path: {0:s}".format(path_j2d))
 
-    with open(path_j2d, 'r') as f:
+    with open(path_j2d, 'rb') as f:
         joint_positions_dict = pk.load(f)
         # Convert joint_positions_dict (dict with item_name+arrays)
         # to joint_positions (list of arrays)
@@ -86,7 +88,7 @@ if __name__ == '__main__':
     print("(vis_preds.py) Loading contact states ...\n"
           " - Path: {0:s}".format(path_contact_states))
 
-    with open(join(path_contact_states), 'r') as f:
+    with open(join(path_contact_states), 'rb') as f:
         data = pk.load(f)
         contact_states = data['contact_states']
         # Sanity check
@@ -164,26 +166,29 @@ if __name__ == '__main__':
                             " == nclasses+1 ({0} vs {1})".format(
                                 len(ctt_states[j_ctt]), nclasses+1))
                     if not np.sum(ctt_states[j_ctt][:-1]) == 1:
-                        raise ValueError(
-                            "check failed: np.sum(ctt_states[j_ctt][:-1])"
+                        print(f"DEBUG: contact file some check failed: {np.sum(ctt_states[j_ctt][:-1])}"\
                             " == 1")
+                        continue
+                        #raise ValueError(
+                        #    "check failed: np.sum(ctt_states[j_ctt][:-1])"
+                        #    " == 1")
 
                     label = ctt_states[j_ctt].tolist().index(1)
 
                     if j_ctt in [5,6]: # soles
                         draw.ellipse(
-                            (x-radius, y-radius, x+radius, y+radius),
+                            (int(x-radius), int(y-radius), int(x+radius), int(y+radius)),
                             fill = None,
                             outline = colors[label],
-                            width=radius/2)
+                            width=int(radius/2))
                     elif j_ctt in [7,8]:
                         draw.ellipse(
-                            (x-radius/2, y-radius/2, x+radius/2, y+radius/2),
+                            (int(x-radius/2), int(y-radius/2), int(x+radius/2), int(y+radius/2)),
                             fill = colors[label],
                             outline = None)
                     else:
                         draw.ellipse(
-                            (x-radius, y-radius, x+radius, y+radius),
+                            (int(x-radius), int(y-radius), int(x+radius), int(y+radius)),
                             fill = colors[label],
                             width=2)
 

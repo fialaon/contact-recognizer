@@ -1,6 +1,6 @@
 import argparse
 import glob
-import cPickle as pk
+import pickle as pk
 import numpy as np
 import numpy.linalg as LA
 from os import makedirs
@@ -89,5 +89,5 @@ if __name__ == '__main__':
     }
 
     if save_info:
-        with open(join(image_folder, "data_info.pkl"), 'w') as f:
-            pk.dump(data_info, f)
+        with open(join(image_folder, "data_info.pkl"), 'wb') as f:
+            pk.dump(data_info, f, protocol=2)

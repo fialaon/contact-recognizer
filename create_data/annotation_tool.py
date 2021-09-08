@@ -2,7 +2,7 @@ import argparse
 import glob
 import cv2 as cv
 import numpy as np
-import cPickle as pk
+import pickle as pk
 from os import makedirs
 from os.path import join, exists, abspath, dirname, basename
 # ploting modules
@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 # plot in notebook cell outputs
 from IPython.display import clear_output
+import time
 
 
 
@@ -55,7 +56,7 @@ class AnnotationTool:
         self.j2dvis_folder = j2dvis_folder
         # load image info
         info_path = join(image_folder, 'data_info.pkl')
-        with open(info_path, 'r') as f:
+        with open(info_path, 'rb') as f:
             data_info = pk.load(f)
             self.image_names = data_info["image_names"]
             self.image_to_itemframe = data_info["image_to_itemframe"]
@@ -65,11 +66,11 @@ class AnnotationTool:
             self.num_items = len(self.item_names) # num_items: number of videos and still images
             self.num_images = len(self.image_names)
         # load 2d joint positions
-        with open(path_j2d, 'r') as f:
+        with open(path_j2d, 'rb') as f:
             self.joint_positions_dict = pk.load(f) # keys are image and video names
 
         if not self.num_items == len(self.joint_positions_dict.keys()):
-            raise ValueError("check failed: self.num_items == len(self.joint_positions_dict.keys())!")
+            raise ValueError(f"check failed: self.num_items ({self.num_items }) == len(self.joint_positions_dict.keys())({len(self.joint_positions_dict.keys())})!")
         print("{0:d} items ({1:d} images) to annotate".format(self.num_items, self.num_images))
         # Names and Openpose ids of the joints to consider
         self.joint_ids = [1, 7, 4, 12, 9, 13, 10, 13, 10]
@@ -111,6 +112,9 @@ class AnnotationTool:
         quit = False
         save_quit = False
         saved = False
+        #first = 0
+        #f = plt.Figure()
+        #f.set_size_inches((10, 5))
         for n in range(item_id, self.num_items):
             source_name = self.item_names[n]
 
@@ -136,8 +140,12 @@ class AnnotationTool:
                         nj_auto += 1
                         continue
                     # load and display original image on the left and pose estimation
+                    #axarr = list()
+                    #axarr.append(f.add_subplot(1,2,1))
+                    #axarr.append(f.add_subplot(1,2,2))
                     f, axarr = plt.subplots(1, 2)
-                    f.set_size_inches((20, 10))
+                    #f.set_size_inches((20, 10))
+                    f.set_size_inches((10, 5))
                     # display bounding box to help to locate the joint
                     recs = [patches.Rectangle(
                         (jpos[0]-patch_size/2, jpos[1]-patch_size/2), patch_size, patch_size, fill=False,
@@ -153,60 +161,76 @@ class AnnotationTool:
                     axarr[1].add_patch(recs[1])
                     axarr[1].axis('off')
 
-                    plt.show(block=False)
+                    # plt.show(block=False)
+                    #if first == 0:
+                    #    plt.show(block=False)
+                    #    first += 1
+                    #else:
+                    #    f.canvas.draw()
 
-                    ask_cmd = True
-                    while ask_cmd:
-                        label = raw_input(self.joint_names[j]+
-                            '('+str(int(jpos[0]))+', '+str(int(jpos[1]))+'):')
-                        if label not in self.commands:
-                            print 'unknown command. Enter again:'
-                            continue
-                        elif label=='a' and fid==img_id:
-                            print 'cannot use command <a> at the first image of each item!'
-                            continue
-                        elif label=='a':
-                            # find the index of jname in self.joints_to_annotate
-                            index_start = self.joints_to_annotate.index(jname)
-                            # loop over the joints to annotate
-                            for idx in range(index_start, len(self.joints_to_annotate)):
-                                jname = self.joints_to_annotate[idx]
-                                k = self.joint_names.index(jname)
-                                jid = self.joint_ids[k]
-                                jpos = j2d_item[fid, jid, :].copy()
-                                if jpos[2] < 1e-4:
-                                    contact_item[fid, k, -1] = 1
-                                    nj_auto += 1
-                                else:
-                                    contact_item[fid, k, :] = \
-                                        contact_item[fid-stride, k, :].copy()
-                                    # contact_item[fid, k, 3:] = \
-                                    #     contact_item[fid-stride, k, 3:].copy()
-                                    nj_anno += 1
-                            clear_output()
-                            ask_cmd = False
-                            next_img = True
-                        elif label=='wq':
-                            # write to file and quit
-                            self.contact_states[n] = contact_item.copy()
-                            self.set_annotation_zero(n, fid)
-                            clear_output()
-                            ask_cmd = False
-                            save_quit = True
-                        elif label=='q!':
-                            # quit
-                            self.set_annotation_zero(item_id, img_id)
-                            clear_output()
-                            ask_cmd = False
-                            quit = True
-                        else:
-                            for l in label:
-                                contact_item[fid, j, int(l)-1] = 1
-                            nj_anno += 1
-                            ask_cmd = False
-                            clear_output()
+                    # write to file and quit
 
-                    plt.close()
+
+
+                    #TODO: we are skipping annotation and drawing here, because on cluster its not working properly
+                    #  
+                    self.contact_states[n] = contact_item.copy()
+                    self.set_annotation_zero(n, fid)
+                    clear_output()
+                    save_quit = True
+
+                    # ask_cmd = True
+                    # while ask_cmd:
+                    #     label = input(self.joint_names[j]+
+                    #         '('+str(int(jpos[0]))+', '+str(int(jpos[1]))+'):')
+                    #     if label not in self.commands:
+                    #         print('unknown command. Enter again:')
+                    #         continue
+                    #     elif label=='a' and fid==img_id:
+                    #         print('cannot use command <a> at the first image of each item!')
+                    #         continue
+                    #     elif label=='a':
+                    #         # find the index of jname in self.joints_to_annotate
+                    #         index_start = self.joints_to_annotate.index(jname)
+                    #         # loop over the joints to annotate
+                    #         for idx in range(index_start, len(self.joints_to_annotate)):
+                    #             jname = self.joints_to_annotate[idx]
+                    #             k = self.joint_names.index(jname)
+                    #             jid = self.joint_ids[k]
+                    #             jpos = j2d_item[fid, jid, :].copy()
+                    #             if jpos[2] < 1e-4:
+                    #                 contact_item[fid, k, -1] = 1
+                    #                 nj_auto += 1
+                    #             else:
+                    #                 contact_item[fid, k, :] = \
+                    #                     contact_item[fid-stride, k, :].copy()
+                    #                 # contact_item[fid, k, 3:] = \
+                    #                 #     contact_item[fid-stride, k, 3:].copy()
+                    #                 nj_anno += 1
+                    #         clear_output()
+                    #         ask_cmd = False
+                    #         next_img = True
+                    #     elif label=='wq':
+                    #         # write to file and quit
+                    #         self.contact_states[n] = contact_item.copy()
+                    #         self.set_annotation_zero(n, fid)
+                    #         clear_output()
+                    #         ask_cmd = False
+                    #         save_quit = True
+                    #     elif label=='q!':
+                    #         # quit
+                    #         self.set_annotation_zero(item_id, img_id)
+                    #         clear_output()
+                    #         ask_cmd = False
+                    #         quit = True
+                    #     else:
+                    #         for l in label:
+                    #             contact_item[fid, j, int(l)-1] = 1
+                    #         nj_anno += 1
+                    #         ask_cmd = False
+                    #         clear_output()
+
+                    # plt.close()
 
                     if next_img or quit or save_quit:
                         break
@@ -222,17 +246,20 @@ class AnnotationTool:
             saved = self.save_annotations()
 
         if saved:
-            print 'you have annotated {} images,'.format(nimg_done)
-            print 'with {} detected (and annotated) joints.'.format(nj_anno)
-            print 'with {} undetected joints.'.format(nj_auto)
+            print('you have annotated {} images,'.format(nimg_done))
+            print('with {} detected (and annotated) joints.'.format(nj_anno))
+            print('with {} undetected joints.'.format(nj_auto))
             if save_quit:
-                print 'you stopped at source: #{0:d}, image: #{1:d}'.format(n, fid)
-                print 'begin with these item and image ids next time!'
+                print('you stopped at source: #{0:d}, image: #{1:d}'.format(n, fid))
+                print('begin with these item and image ids next time!')
+                #plt.close()
             else:
-                print 'images from '+self.image_folder+' are all annotated'
-                print 'well done!'
+                print('images from '+self.image_folder+' are all annotated')
+                print('well done!')
+                #plt.close()
         else:
-            print 'quit without saving'
+            print('quit without saving')
+            #plt.close()
 
     def set_annotation_zero(self, item_id, img_id):
         '''
@@ -259,13 +286,13 @@ class AnnotationTool:
         data['joint_names'] = self.joint_names
         data['joint_ids'] = self.joint_ids
         data['contact_states'] = self.contact_states
-        with open(save_path, 'w') as f:
+        with open(save_path, 'wb') as f:
             pk.dump(data, f)
             print('annotation saved to {:s}'.format(save_path))
             return True
 
     def load_annotations(self, anno_path):
-        with open(join(anno_path), 'r') as f:
+        with open(join(anno_path), 'rb') as f:
             data = pk.load(f)
             print('annotation load from {:s}'.format(anno_path))
             self.name = data['name']
@@ -288,7 +315,7 @@ class AnnotationTool:
         num_items = len(contact_states)
         for n in range(num_items):
             source_name = self.item_names[n]
-            raw_input("Processing item #{0:d} ({1:s}). Press Enter to continue ...".format(n, source_name))
+            input("Processing item #{0:d} ({1:s}). Press Enter to continue ...".format(n, source_name))
             contact_item = contact_states[n]
             j2d_item = joint_positions[n]
             if contact_item is None:
@@ -358,7 +385,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     image_folder = args.image_folder
-    j2dvis_folder = args.j2d_folder
+    j2dvis_folder = args.j2dvis_folder
     path_j2d = args.path_j2d
 
     annot = AnnotationTool(image_folder, j2dvis_folder, path_j2d)

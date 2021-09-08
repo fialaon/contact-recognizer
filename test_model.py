@@ -3,7 +3,7 @@ import copy
 import random
 import h5py
 import time
-import cPickle as pk
+import pickle as pk
 import numpy as np
 from datetime import datetime
 from os import makedirs, remove
@@ -73,7 +73,7 @@ def main(joint_name, resume, data_path, info_path, save_path):
     # ------------------------------------------------------------------
     print("(test_model.py) Resuming checkpoint ...\n"
           " - Resume path: {0:s}".format(resume))
-    checkpt = torch.load(resume)
+    checkpt = torch.load(resume, encoding='latin1', map_location=torch.device('cpu'))
     joint_name = checkpt['joint_name']
     patch_size = checkpt['patch_size']
     parameters_id = checkpt['parameters_id']
@@ -133,7 +133,7 @@ def main(joint_name, resume, data_path, info_path, save_path):
     # ------------------------------------------------------------------
 
     # Load image info
-    with open(info_path, 'r') as f:
+    with open(info_path, 'rb') as f:
         data_info = pk.load(f)
         item_names = data_info["item_names"]
         item_lengths = data_info["item_lengths"]
@@ -154,7 +154,7 @@ def main(joint_name, resume, data_path, info_path, save_path):
     scores = [None] * num_items
     contact_states_pred = [None] * num_items
     if exists(save_path):
-        with open(save_path, 'r') as f:
+        with open(save_path, 'rb') as f:
             data = pk.load(f)
             # Sanity check
             if not num_items==len(data["scores"]):
@@ -209,7 +209,7 @@ def main(joint_name, resume, data_path, info_path, save_path):
     data["contact_states"] = contact_states_pred
     data["scores"] = scores
     data["item_names"] = item_names
-    with open(save_path, 'w') as f:
+    with open(save_path, 'wb') as f:
         pk.dump(data, f)
         print("(test_model.py) Contact states saved to: \n - {0:s}".format(
             save_path))

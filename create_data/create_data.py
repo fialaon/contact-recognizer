@@ -1,6 +1,6 @@
 import argparse
 import h5py
-import cPickle as pk
+import pickle as pk
 import numpy as np
 import numpy.linalg as LA
 from os import makedirs
@@ -74,8 +74,8 @@ def count_undetected_joints(contact_states, contact_ids):
     contact_states_sum = np.zeros(contact_states_size).astype(int)
     num_images = 0
     for i, contact_item in enumerate(contact_states):
-        if i in items_with_unlabelled_data:
-            continue
+        #TODO: CLEANUP if i in items_with_unlabelled_data:
+        #TODO: CLEANUP     continue
 
         # Add up contact_item for all images
         nimages_item = contact_item.shape[0]
@@ -105,6 +105,8 @@ if __name__ == '__main__':
                         help="Joint names split by comma, for example, 'l_hand,r_hand,l_knee,r_knee,l_sole,r_sole'."
                         "It is also possible to merge the left and the right joints by removing the r_ or l_,"
                         "for example, 'hands,knees,soles'.")
+    parser.add_argument('path_j2d', type=str, metavar='DIR',
+                        help="path to joints directory.")
 
     args = parser.parse_args()
 
@@ -115,7 +117,8 @@ if __name__ == '__main__':
 
     # ---------------- Load necessary info ----------------
     path_datainfo = join(image_folder, "data_info.pkl")
-    path_j2d = join(image_folder, "Openpose-video.pkl")
+    path_j2d = args.path_j2d
+    #path_j2d = join(image_folder, "Openpose-video.pkl")
     path_contact_states = join(image_folder, "contact_states_annotation.pkl")
     # Sanity check
     if not exists(path_datainfo):
@@ -127,7 +130,7 @@ if __name__ == '__main__':
 
     # Load data info
     print("Load data info from {0:s}".format(path_datainfo))
-    with open(path_datainfo, 'r') as f:
+    with open(path_datainfo, 'rb') as f:
         data_info = pk.load(f)
         image_names = data_info["image_names"]
         image_to_itemframe = data_info["image_to_itemframe"]
@@ -137,7 +140,7 @@ if __name__ == '__main__':
 
     # Load joint 2d positions
     print("Load joint 2D locations from {0:s}".format(path_j2d))
-    with open(path_j2d, 'r') as f:
+    with open(path_j2d, 'rb') as f:
         joint_positions_dict = pk.load(f)
         # Convert joint_positions_dict (dict with item_name+arrays) to joint_positions (list of arrays)
         joint_positions = [None] * len(item_names)
@@ -146,7 +149,7 @@ if __name__ == '__main__':
 
     # load contact states
     print('Load contact states from {0:s}'.format(path_contact_states))
-    with open(join(path_contact_states), 'r') as f:
+    with open(join(path_contact_states), 'rb') as f:
         data = pk.load(f)
         contact_states = data['contact_states']
 
@@ -163,9 +166,9 @@ if __name__ == '__main__':
     if len(item_ids_to_skip) > 0:
         print("Warning: Skipped *{0:d}* items with unlabelled contact states!".format(
             len(item_ids_to_skip)))
-        for i in item_ids_to_skip:
-            item_names_to_skip.append(item_names[i])
-            print("  - {0:s}".format(item_names[i]))
+        #TODO:CLEANUP for i in item_ids_to_skip:
+        #TODO:CLEANUP     item_names_to_skip.append(item_names[i])
+        #TODO:CLEANUP     print("  - {0:s}".format(item_names[i]))
 
     # Initialize hdf5 data file
     if not exists(save_folder):

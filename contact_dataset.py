@@ -1,6 +1,6 @@
 import h5py
 import random
-import cPickle as pk
+import pickle as pk
 import numpy as np
 import numpy.linalg as LA
 import torch.utils.data as data
@@ -158,7 +158,7 @@ class ContactDataset(data.Dataset):
         labels = [-1] * nimgs
         for i in range(nimgs):
             label_assigned = False
-            for label, maps in label_mapper.iteritems():
+            for label, maps in label_mapper.items():
                 for mp in maps:
                     if contact_states[i].tolist() == mp:
                         labels[i] = label

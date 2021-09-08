@@ -2,7 +2,7 @@ import argparse
 import random
 import h5py
 import time
-import cPickle as pk
+import pickle as pk
 import numpy as np
 from datetime import datetime
 from os import makedirs, remove
@@ -30,7 +30,8 @@ def evaluate_model(dataloaders,
                    model_ft,
                    use_gpu):
 
-    nclasses = len(classes)
+    nclasses = 3#len(classes)#TODO: clean up this
+    #nclasses = 2#neck
     model_ft.train(False)
 
     # prepare precision recall curve
@@ -86,15 +87,30 @@ def evaluate_model(dataloaders,
         fpr = dict()
         tpr = dict()
         roc_auc = dict()
-        for n in range(nclasses):
-            name = str(classes[n])
-            precision[name], recall[name], _ = \
-                precision_recall_curve(labels_bin[:, n], scores_all[:, n])
-            average_precision[name] = \
-                average_precision_score(labels_bin[:, n], scores_all[:, n])
-            fpr[name], tpr[name], _ = \
-                roc_curve(labels_bin[:, n], scores_all[:, n])
-            roc_auc[name] = auc(fpr[name], tpr[name])
+        print(f"PHASE: {phase}")
+        # for n in range(nclasses):
+        #     name = str(classes[n])
+        #     precision[name], recall[name], _ = \
+        #         precision_recall_curve(labels_bin[:, n], scores_all[:, n])
+        #     average_precision[name] = \
+        #         average_precision_score(labels_bin[:, n], scores_all[:, n])
+        #     fpr[name], tpr[name], _ = \
+        #         roc_curve(labels_bin[:, n], scores_all[:, n])
+        #     roc_auc[name] = auc(fpr[name], tpr[name])
+        #     print(f"--name: {name}")
+        #     print(f"--value: {roc_auc[name]}")
+
+        name = '0'
+        n = 0
+        precision[name], recall[name], _ = \
+            precision_recall_curve(labels_bin[:, n], scores_all[:, n])
+        average_precision[name] = \
+            average_precision_score(labels_bin[:, n], scores_all[:, n])
+        fpr[name], tpr[name], _ = \
+            roc_curve(labels_bin[:, n], scores_all[:, n])
+        roc_auc[name] = auc(fpr[name], tpr[name])
+        print(f"--name: {name}")
+        print(f"--value: {roc_auc[name]}")
 
         acc_by_phase[phase] = accuracy
 
@@ -109,4 +125,22 @@ def evaluate_model(dataloaders,
         scores_by_phase[phase] = scores_all.copy()
         labels_by_phase[phase] = labels_all.copy()
 
-    return acc_by_phase, precision_by_phase, recall_by_phase, ap_by_phase, tpr_by_phase, fpr_by_phase, roc_auc_by_phase, scores_by_phase, labels_by_phase
+    return acc_by_phase, precision_by_phase, recall_by_phase, ap_by_phase, \
+           tpr_by_phase, fpr_by_phase, roc_auc_by_phase, scores_by_phase, labels_by_phase
+
+# import pickle
+# import matplotlib.pyplot as plt
+# path_res = '/home/ondra/contact-recognizer/our_data.pkl'
+# res = pickle.load(open(path_res, 'rb'))
+# plt.figure()
+# lw = 2
+# plt.plot(res[5]['train']['2'], res[4]['train']['2'], color='darkorange',
+#          lw=lw, label='ROC curve (area = %0.2f)' % res[6]['train']['2'])
+# plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+# plt.xlim([0.0, 1.0])
+# plt.ylim([0.0, 1.05])
+# plt.xlabel('False Positive Rate')
+# plt.ylabel('True Positive Rate')
+# plt.title('Receiver operating characteristic example')
+# plt.legend(loc="lower right")
+# plt.show()

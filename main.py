@@ -2,7 +2,7 @@ import argparse
 import random
 import h5py
 import time
-import cPickle as pk
+import pickle as pk
 import numpy as np
 from datetime import datetime
 from os import makedirs, remove
@@ -206,7 +206,7 @@ def main(experiment_dir,
     if resume:
         print("(main.py) Resuming checkpoint ...\n"
               " - Resume path: {0:s}".format(resume))
-        checkpt = torch.load(resume)
+        checkpt =  torch.load(resume, encoding='latin1', map_location=torch.device('cpu'))
         joint_name = checkpt['joint_name']
         patch_size = checkpt['patch_size']
         parameters_id = checkpt['parameters_id']
@@ -299,8 +299,8 @@ def main(experiment_dir,
     # Split the training data to train and val sets if the path
     # to validation data is not provided
     create_train_val_info = False
-    if len(paths_validation_data)==1 and paths_validation_data[0]=='':
-        create_train_val_info = True
+    # if len(paths_validation_data)==1 and paths_validation_data[0]=='':#TODO: clean up this
+    #     create_train_val_info = True#TODO: clean up this
 
     if not create_train_val_info:
         image_datasets['train'] = ContactDataset(
@@ -310,11 +310,17 @@ def main(experiment_dir,
             subset_items=None,
             transform=data_transforms['train'])
         phase_names.append('train')
-        classes = np.unique(image_datasets['train'].labels).tolist()
-        nclasses = len(classes)
+        classes = [0, 1, 2]# np.unique(image_datasets['train'].labels).tolist()#TODO: clean up this
+        #classes = [0, 1] #neck
+        # nclasses = len(classes)#TODO: clean up this
+        nclasses = 3
+        #nclasses = 2 #neck
+        print(f"Amount of classes: {nclasses}, here they are: {classes}")
         image_datasets['val'] = ContactDataset(
-            paths_validation_data,
-            hf_strides=strides_validation_data,
+            paths_training_data,
+            # paths_validation_data,#TODO: clean up this
+            hf_strides=strides_training_data,
+            # hf_strides=strides_validation_data,#TODO: clean up this
             label_scheme=label_scheme,
             subset_items=None,
             transform=data_transforms['val'])
@@ -325,7 +331,7 @@ def main(experiment_dir,
             experiment_dir, "train_val_split_{}.pkl".format(joint_name))
 
         if exists(path_train_val_split):
-            with open(path_train_val_split, 'r') as f:
+            with open(path_train_val_split, 'rb') as f:
                 data = pk.load(f)
                 label_scheme = data["label_scheme"]
                 item_ids_train = data["item_ids_train"]
@@ -346,8 +352,9 @@ def main(experiment_dir,
             train_val_ratio = 4.
             item_ids_all = np.unique(image_dataset.item_ids)
             nitems_all = len(item_ids_all)
-            nitems_train = int(nitems_all*train_val_ratio/(train_val_ratio+1))
-            order = range(nitems_all)
+            nitems_train = nitems_all#int(nitems_all*train_val_ratio/(train_val_ratio+1))
+            print(f"from {nitems_all} items we chose {nitems_train} for training")
+            order = list(range(nitems_all))
             random.shuffle(order)
             item_ids_train = item_ids_all[order[:nitems_train]]
             item_ids_val = item_ids_all[order[nitems_train:]]
@@ -359,7 +366,7 @@ def main(experiment_dir,
             data["item_ids_train"] = item_ids_train
             data["item_ids_val"] = item_ids_val
             data["classes"] = classes
-            with open(path_train_val_split, 'w') as f:
+            with open(path_train_val_split, 'wb') as f:
                 pk.dump(data, f)
 
         # Initialize train and validation datasets
@@ -378,8 +385,8 @@ def main(experiment_dir,
             subset_items=item_ids_val,
             transform=data_transforms['val'])
         phase_names.append('val')
-        nclasses = len(classes)
-
+        nclasses = 3#TODO: clean up this
+        # nclasses = len(classes)
 
     # ------------------------------------------------------------------
     print("(main.py) Initializing dataloaders ...")
@@ -453,9 +460,9 @@ def main(experiment_dir,
         if child_counter < freeze_depth:
             for param in child.parameters():
                 param.requires_grad = False
-            print " - child {} was frozen".format(child_counter)
+            print(" - child {} was frozen".format(child_counter))
         else:
-            print " - child {} was not frozen".format(child_counter)
+            print(" - child {} was not frozen".format(child_counter))
         child_counter += 1
 
 
@@ -477,68 +484,81 @@ def main(experiment_dir,
     else:
         print(" - Optimizer state initialized from scratch")
 
-    # Create loss function
-    criterion = nn.CrossEntropyLoss()
-
-    # Gradually decay lr during optimization
-    exp_lr_scheduler = lr_scheduler.StepLR(
-            optimizer_ft,
-            step_size=lr_decay_stepsize,
-            gamma=0.1,
-            last_epoch=-1)
-
-
-    # ------------------------------------------------------------------
-    print("(main.py) Start training ...")
-    best_epoch = -1
-    acc_record = {x: np.zeros((0)) for x in phase_names}
-    loss_record = {x: np.zeros((0)) for x in phase_names}
-
-    model_ft, optimizer_ft, best_epoch, loss_record, acc_record = \
-        train_model(
-            dataloaders,
-            dataset_sizes,
-            phase_names,
-            model_ft,
-            criterion,
-            optimizer_ft,
-            exp_lr_scheduler,
-            num_epochs,
-            use_gpu)
-
-    if resume:
-        # Count the previous epochs
-        best_epoch = epoch_resume + best_epoch + 1
-        # Concatenate loss_record and acc_record
-        for phase in phase_names:
-            acc_record[phase] = np.concatenate(
-                (acc_record_resume[phase], acc_record[phase]))
-            loss_record[phase] = np.concatenate(
-                (loss_record_resume[phase], loss_record[phase]))
+    # TODO: clean up this
+    # # Create loss function
+    # criterion = nn.CrossEntropyLoss()
+    #
+    # # Gradually decay lr during optimization
+    # exp_lr_scheduler = lr_scheduler.StepLR(
+    #         optimizer_ft,
+    #         step_size=lr_decay_stepsize,
+    #         gamma=0.1,
+    #         last_epoch=-1)
+    #
+    #
+    # # ------------------------------------------------------------------
+    # print("(main.py) Start training ...")
+    # best_epoch = -1
+    # acc_record = {x: np.zeros((0)) for x in phase_names}
+    # loss_record = {x: np.zeros((0)) for x in phase_names}
+    #
+    # model_ft, optimizer_ft, best_epoch, loss_record, acc_record = \
+    #     train_model(
+    #         dataloaders,
+    #         dataset_sizes,
+    #         phase_names,
+    #         model_ft,
+    #         criterion,
+    #         optimizer_ft,
+    #         exp_lr_scheduler,
+    #         num_epochs,
+    #         use_gpu)
+    #
+    # if resume:
+    #     # Count the previous epochs
+    #     best_epoch = epoch_resume + best_epoch + 1
+    #     # Concatenate loss_record and acc_record
+    #     for phase in phase_names:
+    #         acc_record[phase] = np.concatenate(
+    #             (acc_record_resume[phase], acc_record[phase]))
+    #         loss_record[phase] = np.concatenate(
+    #             (loss_record_resume[phase], loss_record[phase]))
 
 
     # ------------------------------------------------------------------
     # Evaluate estimation accuracy, precision-recall and ROC
 
-    acc_by_phase, _, _, ap_by_phase, _, _, _, _, _ = \
-        evaluate_model(dataloaders,
-                       classes,
-                       phase_names,
-                       dataset_sizes,
-                       model_ft,
-                       use_gpu)
+    #acc_by_phase, _, _, ap_by_phase, _, _, roc_auc_by_phase, _, _ = \
+    acc_by_phase, precision_by_phase, recall_by_phase, ap_by_phase, tpr_by_phase, fpr_by_phase, roc_auc_by_phase, scores_by_phase, labels_by_phase =  evaluate_model(dataloaders, classes, phase_names, dataset_sizes, model_ft, use_gpu)
+
+    data = [acc_by_phase, precision_by_phase, recall_by_phase, ap_by_phase, tpr_by_phase, fpr_by_phase, roc_auc_by_phase, scores_by_phase, labels_by_phase]
+
+    pickle_out = open("our_data.pkl", 'wb')
+    pk.dump(data, pickle_out)
+    pickle_out.close()
+    print("done")
+    exit(101)
 
     # Compute mAPs from ap_by_phase
     map_by_phase = dict()
     ignore_labels = [] # ignore the "occluded" label for computing mAP
     for phase in phase_names:
         map_effective = []
+       # file_rocauc0.write(roc_auc_by_phase[phase])
         for n in range(nclasses):
             if classes[n] in ignore_labels:
                 continue
             name = str(classes[n])
             map_effective.append(ap_by_phase[phase][name])
         map_by_phase[phase] = np.mean(np.array(map_effective))
+
+   # print("roc auc:", roc_auc_by_phase)
+
+   # file_rocauc = open("roc_auc.txt", 'w')
+   # file_rocauc.write(roc_auc_by_phase)
+
+
+
 
     # Rank the model according to accuracy and mAP, save the top-10
     # best models as checkpoints

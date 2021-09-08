@@ -1,5 +1,5 @@
 import argparse
-import cPickle as pk
+import pickle as pk
 import numpy as np
 import numpy.linalg as LA
 from os import makedirs
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     # Load data info
     print("Load data info from {0:s}".format(path_datainfo))
-    with open(path_datainfo, 'r') as f:
+    with open(path_datainfo, 'rb') as f:
         data_info = pk.load(f)
         image_names = data_info["image_names"]
         image_to_itemframe = data_info["image_to_itemframe"]
@@ -39,11 +39,11 @@ if __name__ == '__main__':
 
     # Load joint 2d positions
     print("Load joint 2D locations from {0:s}".format(path_j2d))
-    with open(path_j2d, 'r') as f:
+    with open(path_j2d, 'rb') as f:
         joint_positions_dict = pk.load(f)
 
     # Load scale factors for all items
-    with open(path_resizeinfo, 'r') as f:
+    with open(path_resizeinfo, 'rb') as f:
         data_resizeinfo = pk.load(f)
         item_scales = data_resizeinfo['item_scales']
         if (not len(data_resizeinfo["item_names"]) == len(item_names)):
@@ -61,6 +61,6 @@ if __name__ == '__main__':
 
     if not exists(dirname(save_path)):
         makedirs(dirname(save_path))
-    with open(save_path, 'w') as f:
+    with open(save_path, 'wb') as f:
         pk.dump(new_joint_positions, f)
     print("Scaled joint 2D positions saved to {0:s}".format(save_path))
